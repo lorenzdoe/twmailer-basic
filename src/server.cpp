@@ -10,6 +10,7 @@
 #include <cstring>
 #include <arpa/inet.h>
 #include <string>
+#include <filesystem>
 
 /* *************************************************** */
 
@@ -19,10 +20,12 @@ using std::cerr;
 using std::cout;
 using std::endl;
 using std::string;
+using std::filesystem::create_directory;
 
 bool abortRequested = false;
 int create_socket = -1;         //
 int new_socket = -1;            // hold the file descriptor
+string spool;                   // spool directory
 
 void clientCommunication(void* data);
 void signalHandler(int sig);
@@ -55,6 +58,13 @@ int main(int argc, char* argv[])
     }
 
     port = atoi(argv[1]);       //converts char* to int
+    spool = argv[2];                //saves spool directory name
+    create_directory(spool);
+    
+
+
+
+
 
     ////////////////////////////////////////////////////////////////////////////
     // SIGNAL HANDLER
@@ -439,6 +449,12 @@ bool send_protocol(int *socket, char *buffer, string &message)
     }
 
     message = sender + "\n" + receiver + "\n" + subject + "\n" + mail_message + "\n";
+
+    // Search, create and manipulate files
+
+    create_directory(spool+"/"+sender);
+    create_directory(spool+"/"+receiver);
+
     send_client(socket, message);
 
     return true;
