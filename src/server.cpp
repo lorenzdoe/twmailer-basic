@@ -9,6 +9,7 @@
 #include <csignal>
 #include <cstring>
 #include <arpa/inet.h>
+#include <string>
 
 /* *************************************************** */
 
@@ -17,14 +18,27 @@
 using std::cerr;
 using std::cout;
 using std::endl;
+using std::string;
 
 bool abortRequested = false;
 int create_socket = -1;         //
 int new_socket = -1;            // hold the file descriptor
 
-void* clientCommunication(void* data);
+void clientCommunication(void* data);
 void signalHandler(int sig);
 void print_usage(char* program_name);
+bool send_client(const int* socket, string &buffer);   //sends client a string
+bool receive_client(const int *socket, char *buffer, string &message);
+bool handle(int *socket, char *buffer, string &message);
+
+void OK(int *socket, string &message);
+void ERR(int *socket, string &message);
+
+//// PROTOCOLS
+bool send_protocol(int *socket, char *buffer, string &message);
+bool list_protocol(int *socket, char *buffer, string &message);
+bool read_protocol(int *socket, char *buffer, string &message);
+bool delete_protocol(int *socket, char *buffer, string &message);
 
 int main(int argc, char* argv[])
 {
@@ -209,67 +223,29 @@ void signalHandler(int sig)
     }
 }
 
-void* clientCommunication(void* data)
+void clientCommunication(void* data)
 {
     char buffer[BUF];
-    int size;
+    string message;
     int *current_socket = (int*) data;
 
     ////////////////////////////////////////////////////////////////////////////
     // SEND welcome message
-    strcpy(buffer, "Welcome to myserver!\r\nPlease enter your commands...\r\n");
-    if(send(*current_socket, buffer, strlen(buffer), 0) == -1)
+    message = "Welcome to myserver!\r\nPlease enter your commands...\r\n";
+    if(! send_client(current_socket, message))
     {
-        cerr << "send failed" << endl;
-        return NULL;
+        return;
     }
 
     do
     {
-        /////////////////////////////////////////////////////////////////////////
-        // RECEIVE
-        size = recv(*current_socket, buffer, BUF -1 , 0);
-        if( size == -1 )
+        if( !handle(current_socket, buffer, message))
         {
-            if(abortRequested)
-            {
-                cerr << "recv error after aborted " << endl;
-            }
-            else
-            {
-                cerr << "recv error" << endl;
-            }
             break;
         }
 
-        if( size == 0 )
-        {
-            cout << "Client closed remote socket" << endl;
-            break;
-        }
 
-        // remove ugly debug message, because of the sent newline of client
-        if (buffer[size - 2] == '\r' && buffer[size - 1] == '\n')
-        {
-            size -= 2;
-        }
-        else if (buffer[size - 1] == '\n')
-        {
-            --size;
-        }
-
-        buffer[size] = '\0';
-        cout << "Message received: " << buffer << endl;
-
-        if(send(*current_socket, "OK", 3, 0) == -1)
-        {
-            cerr << "send answer failed" << endl;
-            return NULL;
-        }
-
-        // TODO: check here for different options
-
-    } while(strcmp(buffer, "quit") != 0 && !abortRequested);
+    } while(message != "QUIT" && !abortRequested);
 
     // closes/frees the descriptor if not already
     if (*current_socket != -1)
@@ -285,10 +261,200 @@ void* clientCommunication(void* data)
         *current_socket = -1;
     }
 
-    return NULL;
 }
 
 void print_usage(char* program_name)
 {
     cout << "Usage: " << program_name << " <port> <mail-spool-directoryname>" << endl;
+}
+
+bool send_client(const int* socket, string &buffer)
+{
+    if(send(*socket, buffer.c_str(), buffer.length(), 0) == -1)
+    {
+        cerr << "send answer failed" << endl;
+        return false;
+    }
+    return true;
+}
+
+bool receive_client(const int *socket, char *buffer, string &message)
+{
+    int size;
+    /////////////////////////////////////////////////////////////////////////
+    // RECEIVE
+    size = recv(*socket, buffer, BUF - 1 , 0);
+    if( size == -1 /* just to be sure */)
+    {
+        if(abortRequested)
+        {
+            cerr << "recv error after aborted " << endl;
+        }
+        else
+        {
+            cerr << "recv error" << endl;
+        }
+        return false;
+    }
+
+    if( size == 0 )
+    {
+        cout << "Client closed remote socket" << endl;
+        return false;
+    }
+
+    // remove ugly debug message, because of the sent newline of client
+    if (buffer[size - 2] == '\r' && buffer[size - 1] == '\n')
+    {
+        size -= 2;
+    }
+    else if (buffer[size - 1] == '\n')
+    {
+        --size;
+    }
+    buffer[size] = '\0';
+
+    message = buffer;   // handles buffer in string message
+
+    return true;
+}
+
+bool handle(int *socket, char *buffer, string &message)
+{
+    if( !receive_client(socket, buffer, message))
+    {
+        return false;
+    }
+
+    cout << "Handle message: " << message << endl;
+
+    if(message == "SEND")
+    {
+        if(!send_protocol(socket, buffer, message))
+        {
+            ERR(socket, message);
+        }
+        else
+        {
+            OK(socket, message);
+        }
+        return true;
+    }
+    else if(message == "LIST")
+    {
+        return list_protocol(socket, buffer, message);
+    }
+    else if(message == "READ")
+    {
+        return read_protocol(socket, buffer, message);
+    }
+    else if(message == "DELETE")
+    {
+        return delete_protocol(socket, buffer, message);
+    }
+    else if(message == "QUIT")
+    {
+        return false;
+    }
+    else
+    {
+        message = "invalid command";
+        return send_client(socket, message);
+    }
+}
+
+void OK(int *socket, string &message)
+{
+    message = "OK";
+    send_client(socket, message);
+}
+
+void ERR(int *socket, string &message)
+{
+    message = "ERR";
+    send_client(socket, message);
+}
+
+//// PROTOCOLS
+bool send_protocol(int *socket, char *buffer, string &message)
+{
+    // get Sender
+    string sender;
+    if(receive_client(socket,buffer,message))
+    {
+        sender = message;
+        if(sender.empty() || sender.length() > 8)
+        {
+            return false;
+        }
+    }
+    else
+    {
+        return false;
+    }
+
+    // get Receiver
+    string receiver;
+    if(receive_client(socket,buffer,message))
+    {
+        receiver = message;
+        if(receiver.empty() || receiver.length() > 8)
+        {
+            return false;
+        }
+    }
+    else
+    {
+        return false;
+    }
+
+    // get Subject
+    string subject;
+    if(receive_client(socket,buffer,message))
+    {
+        subject = message;
+        if(subject.empty() || subject.length() > 80)
+        {
+            return false;
+        }
+    }
+    else
+    {
+        return false;
+    }
+
+    // get Message
+    message = " ";      //to make sure message is != "."
+    string mail_message;
+    while(message != ".")
+    {
+        if(receive_client(socket,buffer,message))
+        {
+            mail_message += message;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    message = sender + "\n" + receiver + "\n" + subject + "\n" + mail_message + "\n";
+    send_client(socket, message);
+
+    return true;
+}
+
+bool list_protocol(int *socket, char *buffer, string &message)
+{
+    return true;
+}
+
+bool read_protocol(int *socket, char *buffer, string &message)
+{
+    return true;
+}
+
+bool delete_protocol(int *socket, char *buffer, string &message)
+{
+    return true;
 }
