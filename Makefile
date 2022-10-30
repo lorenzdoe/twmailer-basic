@@ -26,13 +26,17 @@ clean:
 	rm -f output/* obj/*
 
 obj/server.o: src/server.cpp
+	mkdir -p obj
 	$(CXX) $(CXXFLAGS) -o obj/server.o src/server.cpp -c
 
 obj/client.o: src/client.cpp
+	mkdir -p obj
 	$(CXX) $(CXXFLAGS) -o obj/client.o src/client.cpp -c
 
 output/server: obj/server.o
+	mkdir -p output
 	$(CXX) $(CXXFLAGS) -o output/server obj/server.o $(LFLAGS)
 
 output/client: obj/client.o
+	mkdir -p output
 	$(CXX) $(CXXFLAGS) -o output/client obj/client.o $(LFLAGS)
