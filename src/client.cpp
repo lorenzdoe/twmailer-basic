@@ -140,11 +140,12 @@ int main(int argc, char *argv[])
             {
                 buffer[size] = '\0';
                 cout << "<< " << buffer << endl;
+                /*
                 if(strcmp(buffer, "OK") != 0)
                 {
                     cerr << "<< Server error occured, abort" << endl;
                     break;
-                }
+                }*/
             }
         }
     } while(!isQuit);

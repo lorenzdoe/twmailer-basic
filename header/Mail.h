@@ -22,7 +22,7 @@ public:
     Mail(string& sender, string& receiver, string& subject, string& message);
     ~Mail();
 
-    void save(string& spool);
+    bool save(string& spool);
 };
 
 

@@ -15,7 +15,7 @@ Mail::Mail(string& sender, string& receiver, string& subject, string& message)
     this->message = message;
 }
 
-void Mail::save(string& spool)
+bool Mail::save(string& spool)
 {
     string mail = sender + "\n"
               + receiver + "\n"
@@ -27,10 +27,22 @@ void Mail::save(string& spool)
     fs::create_directory(sender = spool+"/"+sender);
     fs::create_directory(receiver = spool+"/"+receiver);
 
+    // check if message with this subject already exists
+    while(fs::exists(sender + "/" + subject + ".txt") || fs::exists(receiver + "/" + subject + ".txt"))
+    {
+        subject += "_1";
+        if(subject.length() > 80)
+        {
+            return false;
+        }
+    }
+
     std::ofstream SendersFile(sender + "/" + subject + ".txt");
     std::ofstream ReceiversFile(receiver + "/" + subject + ".txt");
     SendersFile << mail;
     ReceiversFile << mail;
     SendersFile.close();
     ReceiversFile.close();
+
+    return true;
 }

@@ -228,6 +228,8 @@ bool send_protocol(int *socket, char *buffer, string &message)
         return false;
     }
 
+    cout << "sender: "<< sender << endl;
+
     // get Receiver
     string receiver;
     if(receive_client(socket,buffer,message))
@@ -242,6 +244,8 @@ bool send_protocol(int *socket, char *buffer, string &message)
     {
         return false;
     }
+
+    cout << "receiver: " << receiver << endl;
 
     // get Subject
     string subject;
@@ -258,6 +262,8 @@ bool send_protocol(int *socket, char *buffer, string &message)
         return false;
     }
 
+    cout << "subject: " << subject << endl;
+
     // get Message
     message = " ";      //to make sure message is != "."
     string mail_message;
@@ -271,10 +277,14 @@ bool send_protocol(int *socket, char *buffer, string &message)
         {
             return false;
         }
+
+        cout << "message: " << message << endl;
     }
 
     Mail mail(sender, receiver, subject, mail_message);
     mail.save(spool);
+
+    //TODO: check if save worked
 
     return true;
 }
