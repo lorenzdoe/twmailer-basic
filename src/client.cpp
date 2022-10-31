@@ -9,6 +9,7 @@
 #include <cstring>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <string>
 
 /* *************************************************** */
 
@@ -17,8 +18,12 @@
 using std::cerr;
 using std::cout;
 using std::endl;
+using std::string;
 
 void print_usage(char* program_name);
+
+bool read_buffer(char* buffer);
+bool send_protocol(int* socket, char* buffer);
 
 int main(int argc, char *argv[])
 {
@@ -97,31 +102,35 @@ int main(int argc, char *argv[])
     {
         cout << ">>";
 
-        if(fgets(buffer, BUF, stdin) != NULL)
-        {
-            size = strlen(buffer);
-            // remove new-line signs from string at the end
-            if( buffer[size-2] == '\r' && buffer[size-1] == '\n')
+            if(!read_buffer(buffer))    //read buffer
             {
-                size -= 2;
-                buffer[size] = 0;
-            }
-            else if(buffer[size-1] == '\n')
-            {
-                --size;
-                buffer[size] = 0;
-            }
-            isQuit = strcmp(buffer, "quit") == 0;
-
-            //////////////////////////////////////////////////////////////////////
-            // SEND DATA
-            // send will fail if connection is closed, but does not set
-            // the error of send, but still the count of bytes sent
-            if(send(create_socket, buffer, size, 0) == -1)
-            {
-                cerr << "send error" << endl;
                 break;
             }
+
+            isQuit = strcmp(buffer, "QUIT") == 0;
+
+            if(strcmp(buffer, "SEND") == 0)
+            {
+                if(!send_protocol(&create_socket, buffer))
+                {
+                    cout << "error: bad input" << endl;
+                    continue;
+                }
+            }
+            else
+            {
+                //////////////////////////////////////////////////////////////////////
+                // SEND DATA
+                // send will fail if connection is closed, but does not set
+                // the error of send, but still the count of bytes sent
+                if(send(create_socket, buffer, size, 0) == -1)
+                {
+                    cerr << "send error" << endl;
+                    break;
+                }
+            }
+
+
 
             //////////////////////////////////////////////////////////////////////
             // RECEIVE FEEDBACK
@@ -147,7 +156,7 @@ int main(int argc, char *argv[])
                     break;
                 }*/
             }
-        }
+
     } while(!isQuit);
 
     ////////////////////////////////////////////////////////////////////////////
@@ -171,4 +180,112 @@ int main(int argc, char *argv[])
 void print_usage(char* program_name)
 {
     cout << "Usage: " << program_name << " <ip> <port>" << endl;
+}
+
+bool read_buffer(char* buffer)
+{
+    int size;
+    if(fgets(buffer, BUF, stdin) != NULL)
+    {
+        size = strlen(buffer);
+
+        // remove new-line signs from string at the end
+        if( buffer[size-2] == '\r' && buffer[size-1] == '\n')
+        {
+            size -= 2;
+            buffer[size] = 0;
+        }
+        else if(buffer[size-1] == '\n')
+        {
+            --size;
+            buffer[size] = 0;
+        }
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+bool send_protocol(int* socket, char* buffer)
+{
+    // get Sender
+    cout << "sender: ";
+    string sender;
+    if(read_buffer(buffer))
+    {
+        sender = buffer;
+        if(sender.empty() || sender.length() > 8)
+        {
+            return false;
+        }
+    }
+    else
+    {
+        return false;
+    }
+
+
+    // get Receiver
+    cout << "receiver: ";
+    string receiver;
+    if(read_buffer(buffer))
+    {
+        receiver = buffer;
+        if(receiver.empty() || receiver.length() > 8)
+        {
+            return false;
+        }
+    }
+    else
+    {
+        return false;
+    }
+
+    // get Subject
+    cout << "subject: ";
+    string subject;
+    if(read_buffer(buffer))
+    {
+        subject = buffer;
+        if(subject.empty() || subject.length() > 80)
+        {
+            return false;
+        }
+    }
+    else
+    {
+        return false;
+    }
+
+
+    // get Message
+    cout << "message:"<< endl;
+    string mail_message;
+    while(strcmp(buffer, ".") != 0)
+    {
+        if(read_buffer(buffer))
+        {
+            mail_message += (string)buffer + "\n";
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+
+    string mail = "SEND\n"
+                  + sender + "\n"
+                  + receiver + "\n"
+                  + subject + "\n"
+                  + mail_message;
+
+    if(send(*socket, mail.c_str(), mail.length(), 0) == -1)
+    {
+        cerr << "send error" << endl;
+        return false;
+    }
+    return true;
 }

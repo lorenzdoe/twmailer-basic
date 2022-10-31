@@ -24,8 +24,15 @@ bool Mail::save(string& spool)
 
     // Search, create and manipulate files
     // first creates directory if not exists
-    fs::create_directory(sender = spool+"/"+sender);
-    fs::create_directory(receiver = spool+"/"+receiver);
+    try
+    {
+        fs::create_directory(sender = spool+"/"+sender);
+        fs::create_directory(receiver = spool+"/"+receiver);
+    }
+    catch(...)
+    {
+        return false;
+    }
 
     // check if message with this subject already exists
     while(fs::exists(sender + "/" + subject + ".txt") || fs::exists(receiver + "/" + subject + ".txt"))

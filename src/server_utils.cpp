@@ -160,9 +160,12 @@ bool handle(int *socket, char *buffer, string &message)
         return false;
     }
 
-    cout << "Handle message: " << message << endl;
+    string option = message.substr(0,message.find("\n")); //option is always first line
+    message = message.substr(message.find("\n")+1,message.length());
 
-    if(message == "SEND")
+    cout << "Handle command: " << option;
+
+    if(option == "SEND")
     {
         if(!send_protocol(socket, buffer, message))
         {
@@ -174,19 +177,19 @@ bool handle(int *socket, char *buffer, string &message)
         }
         return true;
     }
-    else if(message == "LIST")
+    else if(option == "LIST")
     {
         return list_protocol(socket, buffer, message);
     }
-    else if(message == "READ")
+    else if(option == "READ")
     {
         return read_protocol(socket, buffer, message);
     }
-    else if(message == "DELETE")
+    else if(option == "DELETE")
     {
         return delete_protocol(socket, buffer, message);
     }
-    else if(message == "QUIT")
+    else if(option == "QUIT")
     {
         return false;
     }
@@ -213,80 +216,29 @@ void ERR(int *socket, string &message)
 
 bool send_protocol(int *socket, char *buffer, string &message)
 {
-    // get Sender
-    string sender;
-    if(receive_client(socket,buffer,message))
-    {
-        sender = message;
-        if(sender.empty() || sender.length() > 8)
-        {
-            return false;
-        }
-    }
-    else
-    {
+
+    string sender = message.substr(0,message.find('\n'));
+    message = message.substr(message.find('\n')+1, message.length());
+
+    if(sender.empty() || sender.length() > 8)
         return false;
-    }
 
-    cout << "sender: "<< sender << endl;
+    string receiver = message.substr(0,message.find('\n'));
+    message = message.substr(message.find('\n')+1, message.length());
 
-    // get Receiver
-    string receiver;
-    if(receive_client(socket,buffer,message))
-    {
-        receiver = message;
-        if(receiver.empty() || receiver.length() > 8)
-        {
-            return false;
-        }
-    }
-    else
-    {
+    if(receiver.empty() || receiver.length() > 8)
         return false;
-    }
 
-    cout << "receiver: " << receiver << endl;
+    string subject = message.substr(0,message.find('\n'));
+    message = message.substr(message.find('\n')+1, message.length());
 
-    // get Subject
-    string subject;
-    if(receive_client(socket,buffer,message))
-    {
-        subject = message;
-        if(subject.empty() || subject.length() > 80)
-        {
-            return false;
-        }
-    }
-    else
-    {
+    if(subject.empty() || subject.length() > 80)
         return false;
-    }
 
-    cout << "subject: " << subject << endl;
 
-    // get Message
-    message = " ";      //to make sure message is != "."
-    string mail_message;
-    while(message != ".")
-    {
-        if(receive_client(socket,buffer,message))
-        {
-            mail_message += message + "\n";
-        }
-        else
-        {
-            return false;
-        }
+    Mail mail(sender, receiver, subject, message);
 
-        cout << "message: " << message << endl;
-    }
-
-    Mail mail(sender, receiver, subject, mail_message);
-    mail.save(spool);
-
-    //TODO: check if save worked
-
-    return true;
+    return mail.save(spool);
 }
 
 bool list_protocol(int *socket, char *buffer, string &message)
