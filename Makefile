@@ -25,17 +25,23 @@ clean:
 	clear
 	rm -f output/* obj/*
 
-obj/server.o: src/server.cpp
+obj/server.o: src/server_main.cpp
 	mkdir -p obj
-	$(CXX) $(CXXFLAGS) -o obj/server.o src/server.cpp -c
+	$(CXX) $(CXXFLAGS) -o obj/server.o src/server_main.cpp -c
+
+obj/server_utils.o: src/server_utils.cpp
+	$(CXX) $(CXXFLAGS) -o obj/server_utils.o src/server_utils.cpp -c
 
 obj/client.o: src/client.cpp
 	mkdir -p obj
 	$(CXX) $(CXXFLAGS) -o obj/client.o src/client.cpp -c
 
-output/server: obj/server.o
+obj/Mail.o: src/Mail.cpp
+	$(CXX) $(CXXFLAGS) -o obj/Mail.o src/Mail.cpp -c
+
+output/server: obj/server.o obj/server_utils.o obj/Mail.o
 	mkdir -p output
-	$(CXX) $(CXXFLAGS) -o output/server obj/server.o $(LFLAGS)
+	$(CXX) $(CXXFLAGS) -o output/server obj/server.o obj/server_utils.o obj/Mail.o $(LFLAGS)
 
 output/client: obj/client.o
 	mkdir -p output
