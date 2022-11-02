@@ -2,6 +2,8 @@
 #include <netinet/in.h>
 #include <csignal>
 #include <iostream>
+#include <filesystem>
+#include <fstream>
 
 #include "../header/server_utils.h"
 #include "../header/Mail.h"
@@ -11,6 +13,7 @@ namespace twMailer
     using std::cerr;
     using std::cout;
     using std::endl;
+    namespace fs = std::filesystem;
 }
 
 using namespace twMailer;
@@ -160,14 +163,14 @@ bool handle(int *socket, char *buffer, string &message)
         return false;
     }
 
-    string option = message.substr(0,message.find("\n")); //option is always first line
-    message = message.substr(message.find("\n")+1,message.length());
+    string option = message.substr(0,message.find('\n')); //option is always first line
+    message = message.substr(message.find('\n')+1,message.length());
 
-    cout << "Handle command: " << option;
+    cout << "Handle command: " << option << endl;
 
     if(option == "SEND")
     {
-        if(!send_protocol(socket, buffer, message))
+        if(!send_protocol(message))
         {
             ERR(socket, message);
         }
@@ -179,15 +182,39 @@ bool handle(int *socket, char *buffer, string &message)
     }
     else if(option == "LIST")
     {
-        return list_protocol(socket, buffer, message);
+        if(!list_protocol(message))
+        {
+            ERR(socket, message);
+        }
+        else
+        {
+            return send_client(socket, message);
+        }
+        return true;
     }
     else if(option == "READ")
     {
-        return read_protocol(socket, buffer, message);
+        if(!read_protocol(message))
+        {
+            ERR(socket, message);
+        }
+        else
+        {
+            return send_client(socket,message);
+        }
+        return true;
     }
     else if(option == "DELETE")
     {
-        return delete_protocol(socket, buffer, message);
+        if(delete_protocol(message))
+        {
+            OK(socket,message);
+        }
+        else
+        {
+            ERR(socket,message);
+        }
+        return true;
     }
     else if(option == "QUIT")
     {
@@ -214,7 +241,7 @@ void ERR(int *socket, string &message)
 
 //////////////////////////////////////////////////////////////// PROTOCOLS
 
-bool send_protocol(int *socket, char *buffer, string &message)
+bool send_protocol(string &message)
 {
 
     string sender = message.substr(0,message.find('\n'));
@@ -241,17 +268,95 @@ bool send_protocol(int *socket, char *buffer, string &message)
     return mail.save(spool);
 }
 
-bool list_protocol(int *socket, char *buffer, string &message)
+bool list_protocol(string &message)
 {
+    // message is username
+    if(message.empty() || !fs::exists(spool + "/" + message) || !fs::is_directory(spool + "/" + message))
+    {
+        // user unknown
+        return false;
+    }
+
+    string output;
+    int count = 0;
+    for(const auto& dirEntry: fs::directory_iterator(spool + "/" + message))
+    {
+        count++;
+        string filename = dirEntry.path().filename();
+        filename = filename.substr(0, filename.length()-4);
+        output += filename + '\n';
+    }
+    output = "messages: " + std::to_string(count) + '\n' + output;
+    message = output;
     return true;
 }
 
-bool read_protocol(int *socket, char *buffer, string &message)
+bool read_protocol(string &message)
 {
-    return true;
+    if(message.empty())
+    {
+        return false;
+    }
+    else
+    {
+        string username = message.substr(0,message.find('\n'));
+        string msgNumber = message.substr(message.find('\n')+1, message.length());
+
+        if(username.empty() || msgNumber.empty() || !fs::exists(spool + "/" + username) || !fs::is_directory(spool + "/" + username))
+        {
+            // user unkwn | bad input
+            return false;
+        }
+        else
+        {
+            for(const auto& dirEntry: fs::directory_iterator(spool + "/" + username))
+            {
+                string compare = dirEntry.path().filename();
+                compare = compare.substr(0, compare.find('_'));
+                if(msgNumber == compare)
+                {
+                    std::ifstream Message((string)dirEntry.path());
+                    string collect;
+                    message = "OK\n";
+                    while(getline(Message, collect))
+                    {
+                        message += collect + '\n';
+                    }
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
 }
 
-bool delete_protocol(int *socket, char *buffer, string &message)
+bool delete_protocol(string &message)
 {
-    return true;
-}
+    if(message.empty())
+    {
+        return false;
+    }
+    else
+    {
+        string username = message.substr(0,message.find('\n'));
+        string msgNumber = message.substr(message.find('\n')+1, message.length());
+
+        if(username.empty() || msgNumber.empty() || !fs::exists(spool + "/" + username) || !fs::is_directory(spool + "/" + username))
+        {
+            // user unkwn | bad input
+            return false;
+        }
+        else
+        {
+            for(const auto& dirEntry: fs::directory_iterator(spool + "/" + username))
+            {
+                string compare = dirEntry.path().filename();
+                compare = compare.substr(0, compare.find('_'));
+                if(msgNumber == compare)
+                {
+                    return fs::remove(dirEntry.path());
+                }
+            }
+        }
+    }
+    return false;}

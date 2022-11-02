@@ -24,6 +24,9 @@ void print_usage(char* program_name);
 
 bool read_buffer(char* buffer);
 bool send_protocol(int* socket, char* buffer);
+bool list_protocol(int* socket, char* buffer);
+bool read_protocol(const int* socket, char* buffer);
+bool delete_protocol(const int* socket, char* buffer);
 
 int main(int argc, char *argv[])
 {
@@ -117,15 +120,40 @@ int main(int argc, char *argv[])
                     continue;
                 }
             }
+            else if(strcmp(buffer, "LIST") == 0)
+            {
+                if(!list_protocol(&create_socket, buffer))
+                {
+                    cout << "error: bad input" << endl;
+                    continue;
+                }
+            }
+            else if(strcmp(buffer, "READ") == 0)
+            {
+                if(!read_protocol(&create_socket, buffer))
+                {
+                    cout << "error: bad input" << endl;
+                    continue;
+                }
+            }
+            else if(strcmp(buffer, "DELETE") == 0)
+            {
+                if(!delete_protocol(&create_socket, buffer))
+                {
+                    cout << "error: bad input" << endl;
+                    continue;
+                }
+            }
             else
             {
                 //////////////////////////////////////////////////////////////////////
                 // SEND DATA
                 // send will fail if connection is closed, but does not set
                 // the error of send, but still the count of bytes sent
+                // TODO: nichts senden bei bad input
                 if(send(create_socket, buffer, size, 0) == -1)
                 {
-                    cerr << "send error" << endl;
+                    cerr << "ERROR: unknown command" << endl;
                     break;
                 }
             }
@@ -265,16 +293,18 @@ bool send_protocol(int* socket, char* buffer)
     string mail_message;
     while(strcmp(buffer, ".") != 0)
     {
-        if(read_buffer(buffer))
+        if(!read_buffer(buffer))
         {
-            mail_message += (string)buffer + "\n";
+            return false;
+
         }
         else
         {
-            return false;
+            mail_message += (string)buffer + "\n";
         }
     }
-
+    mail_message.pop_back();
+    mail_message.pop_back();
 
     string mail = "SEND\n"
                   + sender + "\n"
@@ -285,6 +315,114 @@ bool send_protocol(int* socket, char* buffer)
     if(send(*socket, mail.c_str(), mail.length(), 0) == -1)
     {
         cerr << "send error" << endl;
+        return false;
+    }
+    return true;
+}
+
+bool list_protocol(int* socket, char* buffer)
+{
+    // get Username
+    cout << "username: ";
+    string command = "LIST\n";
+    if(read_buffer(buffer))
+    {
+        if(buffer[0] == '\0')
+        {
+            return false;
+        }
+        command += buffer;
+    }
+    else
+    {
+        return false;
+    }
+
+    if(send(*socket, command.c_str(), command.length(), 0) == -1)
+    {
+        cerr << "list error" << endl;
+        return false;
+    }
+    return true;
+}
+
+bool read_protocol(const int* socket, char* buffer)
+{
+    // get Username
+    string command = "READ\n";
+    cout << "username: ";
+    if(read_buffer(buffer))
+    {
+        if(buffer[0] == '\0')
+        {
+            return false;
+        }
+        command += buffer;
+        command += '\n';
+    }
+    else
+    {
+        return false;
+    }
+
+    cout << "Message-Nr: ";
+    if(read_buffer(buffer))
+    {
+        if(buffer[0] == '\0')
+        {
+            return false;
+        }
+        command += buffer;
+    }
+    else
+    {
+        return false;
+    }
+
+    if(send(*socket, command.c_str(), command.length(), 0) == -1)
+    {
+        cerr << "read error" << endl;
+        return false;
+    }
+    return true;
+}
+
+bool delete_protocol(const int* socket, char* buffer)
+{
+    // get Username
+    string command = "DELETE\n";
+    cout << "username: ";
+    if(read_buffer(buffer))
+    {
+        if(buffer[0] == '\0')
+        {
+            return false;
+        }
+        command += buffer;
+        command += '\n';
+    }
+    else
+    {
+        return false;
+    }
+
+    cout << "Message-Nr: ";
+    if(read_buffer(buffer))
+    {
+        if(buffer[0] == '\0')
+        {
+            return false;
+        }
+        command += buffer;
+    }
+    else
+    {
+        return false;
+    }
+
+    if(send(*socket, command.c_str(), command.length(), 0) == -1)
+    {
+        cerr << "delete error" << endl;
         return false;
     }
     return true;

@@ -30,10 +30,10 @@ void OK(int *socket, string &message);
 void ERR(int *socket, string &message);
 
 ////// PROTOCOLS
-bool send_protocol(int *socket, char *buffer, string &message);
-bool list_protocol(int *socket, char *buffer, string &message);
-bool read_protocol(int *socket, char *buffer, string &message);
-bool delete_protocol(int *socket, char *buffer, string &message);
+bool send_protocol(string &message);
+bool list_protocol(string &message);
+bool read_protocol(string &message);
+bool delete_protocol(string &message);
 
 ////// OTHER UTILS
 void print_usage(char* program_name);
