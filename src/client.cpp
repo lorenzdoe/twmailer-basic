@@ -23,8 +23,8 @@ using std::string;
 void print_usage(char* program_name);
 
 bool read_buffer(char* buffer);
-bool send_protocol(int* socket, char* buffer);
-bool list_protocol(int* socket, char* buffer);
+bool send_protocol(const int* socket, char* buffer);
+bool list_protocol(const int* socket, char* buffer);
 bool read_protocol(const int* socket, char* buffer);
 bool delete_protocol(const int* socket, char* buffer);
 
@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
 
     do
     {
-        cout << ">>";
+        cout << ">> ";
 
             if(!read_buffer(buffer))    //read buffer
             {
@@ -136,7 +136,7 @@ int main(int argc, char *argv[])
                     continue;
                 }
             }
-            else if(strcmp(buffer, "DELETE") == 0)
+            else if(strcmp(buffer, "DEL") == 0)
             {
                 if(!delete_protocol(&create_socket, buffer))
                 {
@@ -150,10 +150,9 @@ int main(int argc, char *argv[])
                 // SEND DATA
                 // send will fail if connection is closed, but does not set
                 // the error of send, but still the count of bytes sent
-                // TODO: nichts senden bei bad input
                 if(send(create_socket, buffer, size, 0) == -1)
                 {
-                    cerr << "ERROR: unknown command" << endl;
+                    cerr << "ERROR: sending error" << endl;
                     break;
                 }
             }
@@ -177,12 +176,6 @@ int main(int argc, char *argv[])
             {
                 buffer[size] = '\0';
                 cout << "<< " << buffer << endl;
-                /*
-                if(strcmp(buffer, "OK") != 0)
-                {
-                    cerr << "<< Server error occured, abort" << endl;
-                    break;
-                }*/
             }
 
     } while(!isQuit);
@@ -213,7 +206,7 @@ void print_usage(char* program_name)
 bool read_buffer(char* buffer)
 {
     int size;
-    if(fgets(buffer, BUF, stdin) != NULL)
+    if(fgets(buffer, BUF, stdin) != nullptr)
     {
         size = strlen(buffer);
 
@@ -236,10 +229,10 @@ bool read_buffer(char* buffer)
     }
 }
 
-bool send_protocol(int* socket, char* buffer)
+bool send_protocol(const int* socket, char* buffer)
 {
     // get Sender
-    cout << "sender: ";
+    cout << "sender:\t\t";
     string sender;
     if(read_buffer(buffer))
     {
@@ -256,7 +249,7 @@ bool send_protocol(int* socket, char* buffer)
 
 
     // get Receiver
-    cout << "receiver: ";
+    cout << "receiver:\t";
     string receiver;
     if(read_buffer(buffer))
     {
@@ -272,7 +265,7 @@ bool send_protocol(int* socket, char* buffer)
     }
 
     // get Subject
-    cout << "subject: ";
+    cout << "subject:\t";
     string subject;
     if(read_buffer(buffer))
     {
@@ -320,7 +313,7 @@ bool send_protocol(int* socket, char* buffer)
     return true;
 }
 
-bool list_protocol(int* socket, char* buffer)
+bool list_protocol(const int* socket, char* buffer)
 {
     // get Username
     cout << "username: ";
@@ -390,7 +383,7 @@ bool read_protocol(const int* socket, char* buffer)
 bool delete_protocol(const int* socket, char* buffer)
 {
     // get Username
-    string command = "DELETE\n";
+    string command = "DEL\n";
     cout << "username: ";
     if(read_buffer(buffer))
     {

@@ -69,20 +69,21 @@ void clientCommunication(void* data)
     ////////////////////////////////////////////////////////////////////////////
     // SEND welcome message
     message = "Welcome to myserver!\r\nPlease enter your commands...\r\n";
-    if(! send_client(current_socket, message))
+    if( !send_client(current_socket, message) )
     {
         return;
     }
 
+    ////// main loop where client communication takes place
     do
     {
-        if( !handle(current_socket, buffer, message))
+
+        if(!handle(current_socket, buffer, message))
         {
             break;
         }
 
-
-    } while(message != "QUIT" && !abortRequested);
+    } while( !abortRequested );
 
     // closes/frees the descriptor if not already
     if (*current_socket != -1)
@@ -146,9 +147,9 @@ void print_usage(char* program_name)
     cout << "Usage: " << program_name << " <port> <Mail-spool-directoryname>" << endl;
 }
 
-bool send_client(const int* socket, string &buffer)
+bool send_client(const int* socket, string &message)
 {
-    if(send(*socket, buffer.c_str(), buffer.length(), 0) == -1)
+    if(send(*socket, message.c_str(), message.length(), 0) == -1)
     {
         cerr << "send answer failed" << endl;
         return false;
@@ -156,7 +157,7 @@ bool send_client(const int* socket, string &buffer)
     return true;
 }
 
-bool handle(int *socket, char *buffer, string &message)
+bool handle(const int *socket, char *buffer, string &message)
 {
     if( !receive_client(socket, buffer, message))
     {
@@ -165,8 +166,6 @@ bool handle(int *socket, char *buffer, string &message)
 
     string option = message.substr(0,message.find('\n')); //option is always first line
     message = message.substr(message.find('\n')+1,message.length());
-
-    cout << "Handle command: " << option << endl;
 
     if(option == "SEND")
     {
@@ -204,7 +203,7 @@ bool handle(int *socket, char *buffer, string &message)
         }
         return true;
     }
-    else if(option == "DELETE")
+    else if(option == "DEL")
     {
         if(delete_protocol(message))
         {
@@ -227,13 +226,13 @@ bool handle(int *socket, char *buffer, string &message)
     }
 }
 
-void OK(int *socket, string &message)
+void OK(const int *socket, string &message)
 {
     message = "OK";
     send_client(socket, message);
 }
 
-void ERR(int *socket, string &message)
+void ERR(const int *socket, string &message)
 {
     message = "ERR";
     send_client(socket, message);

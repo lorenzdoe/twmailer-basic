@@ -1,3 +1,6 @@
+/*
+ * functions needed in the server
+ */
 #ifndef BASIC_SERVER_UTILS_H
 #define BASIC_SERVER_UTILS_H
 
@@ -23,11 +26,12 @@ void signalHandler(int sig);
 bool receive_client(const int *socket, char *buffer, string &message);
 
 ////////////////////////////////////////////////////////////////
-bool send_client(const int* socket, string &buffer);   //sends client a string
-bool handle(int *socket, char *buffer, string &message);
+bool send_client(const int* socket, string &message);   //sends client a string
+bool handle(const int *socket, char *buffer, string &message);
 
-void OK(int *socket, string &message);
-void ERR(int *socket, string &message);
+/// predefined messages to client
+void OK(const int *socket, string &message);
+void ERR(const int *socket, string &message);
 
 ////// PROTOCOLS
 bool send_protocol(string &message);
@@ -37,6 +41,5 @@ bool delete_protocol(string &message);
 
 ////// OTHER UTILS
 void print_usage(char* program_name);
-
 
 #endif //BASIC_SERVER_UTILS_H

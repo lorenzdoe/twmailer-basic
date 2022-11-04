@@ -1,7 +1,6 @@
-//
-// Created by lorenz on 31.10.22.
-//
-
+/*
+ * this class processes a mail
+ */
 #ifndef BASIC_MAIL_H
 #define BASIC_MAIL_H
 

@@ -15,20 +15,22 @@ Mail::Mail(string &sender, string &receiver, string &subject, string &message)
     this->message = message;
 }
 
+// creates the corresponding folders and meta file
+// saves a message in sender, receiver folder
 bool Mail::save(string& spool)
 {
-    string mail = sender + "\n"
-              + receiver + "\n"
-              + subject + "\n"
+    string mail = "sender:" + sender + "\n"
+              + "receiver:" + receiver + "\n"
+              + "subject:" + subject + "\n"
+              + "message:\n"
               + message + "\n";
 
-    // Search, create and manipulate files
-    // first creates directory if not exists
-    // directory contains a metadata file
-    string metaSender = "__" + sender + "__.txt";
-    string metaReceiver = "__" + receiver + "__.txt";
+    // meta-data file holds id of messages
+    string metaSender = "._" + sender + "__.txt";
+    string metaReceiver = "._" + receiver + "__.txt";
     try
     {
+        // creates directory if not exists
         fs::create_directory(sender = spool + "/" + sender);
         fs::create_directory(receiver = spool + "/" + receiver);
     }
@@ -37,9 +39,10 @@ bool Mail::save(string& spool)
         return false;
     }
 
-    string s_number;    // message number sender
-    string r_number;    // message number receiver
+    string s_number;    // message id sender
+    string r_number;    // message id receiver
 
+    // if no meta file exists create one
     if(!fs::exists(spool + "/" + metaSender))
     {
         std::ofstream MetaSenderFile( spool + "/" + metaSender);
@@ -48,6 +51,7 @@ bool Mail::save(string& spool)
 
         s_number = "0";
     }
+    // if meta file exists, read out id of last saved mail and increment
     else
     {
         std::ifstream ReadNumber(spool + "/" + metaSender);
