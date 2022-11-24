@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
                 // SEND DATA
                 // send will fail if connection is closed, but does not set
                 // the error of send, but still the count of bytes sent
-                if(send(create_socket, buffer, size, 0) == -1)
+                if(send(create_socket, buffer, strlen(buffer), 0) == -1)
                 {
                     cerr << "ERROR: sending error" << endl;
                     break;
